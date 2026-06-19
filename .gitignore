@@ -1,0 +1,24 @@
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+.Renviron
+
+# Quarto
+/_freeze/
+/.quarto/
+*_files/
+*.html
+*.pdf
+*.docx
+
+# Stan compiled files
+*.o
+*.so
+*.dll
+*.exe
+
+# macOS
+.DS_Store

@@ -1,0 +1,385 @@
+---
+title: "Group Assignment - Bayesian Inference from Scratch: Coding Your Own Sampling Algorithm"
+subtitle: "Building a Gibbs sampler to measure the effect of mindfulness on exam anxiety"
+author: "Course: Bayesian Statistics"
+format: 
+  pdf:
+    include-in-header:
+      text: |
+        \usepackage{algorithm}
+        \usepackage{algpseudocode}
+editor: source
+---
+
+**Submission:** One student per group submits the report as a `PDF` together with the `.qmd` (or `.R`) files used for the analysis, on Canvas before **Friday, 26th of June at 21:00.**
+
+**Group presentation:** On Friday morning, each group has 10 minutes to present their results and 5 minutes for questions. The presentation is not graded. It is designed to facilitate feedback from the teacher and fellow students, which can then be incorporated into the final report.
+
+Total: 100 points.
+
+\noindent\makebox[\linewidth]{\rule{\paperwidth}{0.4pt}}
+
+
+# Overview
+
+In the following assignment you will investigate if students who attend counseling provided by the university during their exam period are more resilient, in the sense that they have lower anxiety levels. (The data for this assignment is simulated!)
+
+In Chapter 5 of the [Bayes Rules!](https://www.bayesrulesbook.com/) book, you learned about conjugate priors, while in Chapter 7 you learned about the Metropolis-Hastings (MH) algorithm. In this assignment, we will combine those ideas and introduce you to Gibbs sampling, a commonly used MCMC algorithm that uses the properties of conjugate priors to adjust the MH algorithm that you learned about in class.
+
+Think back on your lecture on the MH algorithm. The Markov chain is a tour through the range of plausible parameter values. As tour manager, your job is to make the chain spend proportionally more time in regions of high posterior probability. The result is a collection of tour stops whose distribution approximates the posterior.
+
+Recall how MH works: you draw a value from your proposal distribution and then you decide whether you **accept** or **reject** the proposed value. This process is repeated until you reach a stable Markov Chain:
+
+1. Start at a current value $\theta^{(t-1)}$
+2. Propose a new value $\theta^*$ from some proposal distribution $q(\theta \mid \theta^{(t-1)})$
+3. Compute an acceptance probability that compares how good $\theta^*$ is compared to $\theta^{(t-1)}$
+4. Either move to $\theta^*$ (accept) or stay at $\theta^{(t-1)}$ (reject)
+
+To revisit the algorithm, you can go back to Chapter 7.
+
+Imagine now that you could **always** accept the proposed value, because you know it is from the correct posterior distribution. This is the case when we work with conjugate prior families. Revisit [Chapter 5](https://www.bayesrulesbook.com/chapter-5) to learn about conjugate families, or read the Wikipedia article about [conjugate priors](https://en.wikipedia.org/wiki/Conjugate_prior) to get a nice overview of the most common combinations.
+
+# The Data
+
+A university counseling center runs a small study to evaluate a brief online mindfulness program aimed at reducing students’ anxiety during the exam period.
+
+Students with elevated anxiety before exams complete a baseline questionnaire used to measure anxiety just before the exam period.
+Then they get a random assignment to:
+
+- Control group: receives a short psychoeducational leaflet about exam stress.
+- Mindfulness group: receives the leaflet plus a 2‑week guided online mindfulness program (10 minutes per day).
+
+At the end of the exam period, all students' anxiety levels are measured again.
+
+The following research question should be answered:
+“Does access to the mindfulness program reduce end-of-exam-period anxiety, after adjusting for baseline anxiety levels?”
+
+
+#### Formulate the fitting hypothesis to investigate this research question:
+
+
+# The model
+
+For easier reading of the formulas, we will give the name $x_{1i}$ to the baseline anxiety (`anx_baseline`) variable, the name $x_{2i}$ to the grouping variable (`group`) and the name $y_i$ to the variable that measures the anxiety level at the end of the exam period (`anx_post`).
+
+The likelihood $\mathcal{L}$ for this model is
+
+$$
+y_i \mid \beta_0, \beta_1, \beta_2, \sigma^2 \sim \mathcal{N}(\beta_0 + \beta_1x_{1i} + \beta_2x_{2i}, \sigma^2)
+$$
+
+The conjugate prior distributions for this model are given by
+
+$$
+\begin{aligned}
+\beta_0 &\sim \mathcal{N}(m_0, s^2_0) \\
+\beta_1 &\sim \mathcal{N}(m_1, s^2_1) \\
+\beta_2 &\sim \mathcal{N}(m_2, s^2_2) \\
+\sigma^2 &\sim \mathcal{IG}(a_0, b_0)
+\end{aligned}
+$$
+
+The priors for the $\beta$ parameters are [normal distributions](https://en.wikipedia.org/wiki/Normal_distribution) with the parameters $m$ and $s^2$. The prior for the residual variance $\sigma^2$ of our regression model is a [inverse-gamma](https://en.wikipedia.org/wiki/Inverse-gamma_distribution) distribution with the parameters $a$ (shape) and $b$ (scale). 
+
+Notice the structure of our model: we have a Normal likelihood and Normal priors for each $\beta$ parameter. This is an extension of the **Normal-Normal conjugate family** you studied in Chapter 5 (Section 5.3). In that chapter, you learned that when both the likelihood and prior are Normal, the posterior is also Normal, the key property that makes the Gibbs sampler possible here. The updating rules in the next section are a direct multi-parameter generalisation of the single-parameter Normal-Normal posterior formula (see Bayes Rules! eq. 5.15).
+
+#### As we do not have strong prior information about the effect of the mindfulness program on anxiety levels, we want to use priors that are only weakly informative. Define appropriate parameters for the priors and explain your choice (consider plotting them!).
+
+#### Prior predictive check
+
+Before running the Gibbs sampler, it is good practice to verify that your chosen prior parameters are sensible by running a **prior predictive check**. The idea is simple: if you sample parameter values from the priors and then simulate data from the probability mass function using those values, the resulting distribution of simulated outcomes should cover a plausible range. In this case the outcome should reflect realistic anxiety scores. Inspecting the `anxiety_data`, you can see that the outcome variable (`anx_post`) has a range from 1-100. If the simulated data look wildly unrealistic (e.g., anxiety scores in the thousands, or mostly negative values), that is a signal to reconsider your prior parameters.
+
+The procedure is:
+
+1. Draw $S$ sets of parameter values $(\beta_0^{(s)}, \beta_1^{(s)}, \beta_2^{(s)}, \sigma^{2(s)})$ directly from the prior distributions.
+2. For each draw $s$, simulate a dataset of $n$ observations from the likelihood:
+$$\tilde{y}_i^{(s)} \sim \mathcal{N}\!\left(\beta_0^{(s)} + \beta_1^{(s)} x_{1i} + \beta_2^{(s)} x_{2i},\; \sigma^{2(s)}\right)$$
+3. Plot the distribution of all simulated $\tilde{y}$ values and compare it to the observed range of `anx_post`.
+
+Note that this requires only `rnorm()` and `rgamma()` (or `rinvgamma()`), functions you will also use in the sampler. Below we show an example with some missing code. You can use this for your PPC:
+
+```{r}
+#| eval: false
+S  <- 1000 # number of prior draws
+n  <- nrow(anxiety_data)
+
+# draw from priors
+beta0_prior  <- _____(S, mean = __, sd = sqrt(___))
+beta1_prior  <- _____(S, mean = __, sd = sqrt(___))
+beta2_prior  <- _____(S, mean = __, sd = sqrt(___))
+sigma2_prior <- 1 / ______(S, shape = __, rate = __)
+
+# simulate y for each prior draw 
+y_ppc <- sapply(seq_len(S), function(s) {
+  mu <- _____________________________ # y = b0 + b1*x1 + b2*x2 
+  rnorm(n, mean = mu, sd = sqrt(sigma2_prior[s]))
+})
+
+# plot
+hist(as.vector(y_ppc), breaks = 60, main = "Prior predictive distribution",
+     xlab = "Simulated anx_post")
+abline(v = range(anxiety_data$anx_post), col = "red", lwd = 2, lty = 2)
+legend("topright", legend = "Observed range", col = "red", lty = 2)
+```
+
+Do the simulated anxiety scores cover a plausible range? If not, adjust your prior parameters and repeat until the prior predictive distribution is consistent with what you would expect to observe.
+(*Hint:* Don't be too worried if values fall outside of the plausible range, as long as it is not very far off. With the current setup, you will most likely see negative values in your PPC, while these values are not plausible, they are fine as long as we dont go too far off!)
+
+# Gibbs sampling
+
+Gibbs sampling is a special case of MCMC that exploits conjugate prior families to avoid the accept/reject step of Metropolis-Hastings. Instead of sampling from the joint posterior $p(\beta_0, \beta_1, \beta_2, \sigma^2 \mid y)$ directly, which is intractable, Gibbs sampling cycles through each parameter in turn and draws from its full conditional distribution: the posterior of that parameter given the data and all other parameters held at their current values. Because we chose conjugate priors, each full conditional is a known distribution (in this case: Normal or Inverse-Gamma), so every draw is accepted. Knowing the full conditional of each parameter is not the same as knowing the joint posterior: each conditional assumes the *other* parameters are already known, which in reality they are not. The Gibbs sampler resolves this circularity by updating one parameter at a time, so that the chain as a whole converges to draws from the full joint posterior. To illustrate this, you can study the following example from the book:
+
+## From MH to Gibbs: a simple example
+
+Consider the simplest Normal-Normal model from Chapter 5:
+$$Y \mid \mu \sim \mathcal{N}(\mu, \sigma^2), \quad \mu \sim \mathcal{N}(\theta, \tau^2)$$
+with $\sigma$ known. Suppose for now that we could not derive the posterior analytically. Following Chapter 7, we could use a Metropolis-Hastings sampler with a Uniform proposal: at current location $\mu$, propose $\mu' \sim \text{Unif}(\mu - w, \mu + w)$ and accept with probability
+$$\alpha = \min\!\left\{1,\; \frac{f(\mu')L(\mu' \mid y)}{f(\mu)L(\mu \mid y)}\right\}.$$
+But since we chose a conjugate prior, we actually **know** the posterior: $\mu \mid y \sim \mathcal{N}(\mu_n, \tau_n^2)$ (Ch. 5, eq. 5.15). What if, instead of a Uniform proposal, we proposed directly from this posterior? Then the proposal distribution equals the posterior, and the acceptance ratio simplifies to
+$$\alpha = \min\!\left\{1,\; \frac{f(\mu' \mid y)}{f(\mu \mid y)} \cdot \frac{f(\mu \mid y)}{f(\mu' \mid y)}\right\} = \min\{1,\; 1\} = 1.$$
+Every proposal is accepted. This is the key insight behind Gibbs sampling: **when you can propose from the exact full conditional, the acceptance probability is always 1**.
+
+```{r}
+#| eval: false
+# One Gibbs draw for mu in the simple Normal-Normal model
+# Data: y_bar = 5.74, n = 25, sigma2 = 4 (known), prior: mu ~ N(0, 100)
+gibbs_normal_normal <- function(current_mu, y_bar, n, sigma2, m0, s02) {
+  # Full conditional posterior variance and mean (Ch. 5 eq. 5.15)
+  V_mu  <- 1 / (n / sigma2 + 1 / s02)
+  mu_mu <- V_mu * (n * y_bar / sigma2 + m0 / s02)
+  # Draw from the exact full conditional — acceptance probability = 1
+  rnorm(1, mean = mu_mu, sd = sqrt(V_mu))
+}
+```
+
+Now we apply this same idea to our four-parameter regression model. We cycle through each parameter in turn, drawing from its full conditional, the formulas for which are derived below.
+
+## Full conditional update formulas
+
+To do this, we can derive updating rules from the full conditional distribution. In the formulas below, $V$ denotes the **posterior variance** of the full conditional (not the standard deviation). The subscript indicates which parameter is being updated and what is conditioned on, e.g.\ $V_{0\mid1,2,\sigma^2}$ is the posterior variance of $\beta_0$ given $\beta_1$, $\beta_2$, and $\sigma^2$.
+
+To update $\beta_0$ given $\beta_1$, $\beta_2$, $\sigma^2$, and $y$, we use the following rule:
+$$
+\beta_0 \mid \beta_1, \beta_2, \sigma^2, y \sim \mathcal{N}(\mu_{0\mid1,2,\sigma^2}, V_{0\mid1,2,\sigma^2})
+$$
+where
+
+$$
+\begin{aligned}
+V_{0\mid1,2,\sigma^2} &= \left(\frac{n}{\sigma^2} + \frac{1}{s^2_0}\right)^{-1} \\
+\mu_{0\mid1,2,\sigma^2} &= V_{0\mid1,2,\sigma^2} \left(\frac{1}{\sigma^2} \sum^n_{i=1}(y_i - \beta_1x_{1i} - \beta_2x_{2i}) + \frac{m_0}{s^2_0}\right)
+\end{aligned}
+$$
+
+To update $\beta_1$ given $\beta_0$, $\beta_2$, $\sigma^2$, and $y$, we use the following rule:
+
+$$
+\beta_1 \mid \beta_0, \beta_2, \sigma^2, y \sim \mathcal{N}(\mu_{1\mid0,2,\sigma^2}, V_{1\mid0,2,\sigma^2})
+$$
+
+where
+
+$$
+\begin{aligned}
+V_{1\mid0,2,\sigma^2} &= \left(\frac{1}{\sigma^2}\sum^n_{i=1}x_{1i}^2 + \frac{1}{s^2_1}\right)^{-1} \\
+\mu_{1\mid0,2,\sigma^2} &= V_{1\mid0,2,\sigma^2} \left(\frac{1}{\sigma^2}\sum^n_{i=1}x_{1i}(y_i-\beta_0-\beta_2x_{2i}) + \frac{m_1}{s^2_1}\right)
+\end{aligned}
+$$
+
+To update $\beta_2$ given $\beta_0$, $\beta_1$, $\sigma^2$, and $y$, we use the following rule:
+
+$$
+\beta_2 \mid \beta_0, \beta_1, \sigma^2, y \sim \mathcal{N}(\mu_{2\mid0,1,\sigma^2}, V_{2\mid0,1,\sigma^2})
+$$
+
+where
+
+$$
+\begin{aligned}
+V_{2\mid0,1,\sigma^2} &= \left(\frac{1}{\sigma^2}\sum^n_{i=1}x_{2i}^2 + \frac{1}{s^2_2}\right)^{-1} \\
+\mu_{2\mid0,1,\sigma^2} &= V_{2\mid0,1,\sigma^2} \left(\frac{1}{\sigma^2}\sum^n_{i=1}x_{2i}(y_i-\beta_0-\beta_1x_{1i}) + \frac{m_2}{s^2_2}\right)
+\end{aligned}
+$$
+
+
+Finally, to update $\sigma^2$ given $\beta_0$, $\beta_1$, $\beta_2$, and $y$, we use the following rule:
+
+$$
+\sigma^2 \mid \beta_0, \beta_1, \beta_2, y \sim \mathcal{IG}(a_n,b_n)
+$$
+
+where
+
+$$
+\begin{aligned}
+a_n &= a_0 + \frac{n}{2} \\
+b_n &= b_0 + \frac{1}{2}\sum^n_{i=1}(y_i - \beta_0 - \beta_1x_{1i}-\beta_2x_{2i})^2
+\end{aligned}
+$$
+
+To make the update formulas concrete, here is how to draw one sample from the $\beta_0$ full conditional in R:
+
+```{r}
+#| eval: false
+# Example: draw beta_0 from its full conditional
+# Assumes: beta_1, beta_2, sigma2 are held at their current values
+# x1, x2, y are data vectors of length n
+sample_beta0 <- function(beta_1, beta_2, sigma2, y, x1, x2, m0, s02) {
+  n     <- length(y)
+  resid <- y - beta_1 * x1 - beta_2 * x2         # partial residuals
+  V_0   <- 1 / (n / sigma2 + 1 / s02)             # posterior variance
+  mu_0  <- V_0 * (sum(resid) / sigma2 + m0 / s02) # posterior mean
+  rnorm(1, mean = mu_0, sd = sqrt(V_0))            # draw (always accepted)
+}
+```
+
+The algorithm below summarises the full multi-chain Gibbs sampling procedure:
+
+\begin{algorithm}
+\caption{Gibbs sampler for the Bayesian regression model ($K$ chains)}
+\begin{algorithmic}[1]
+\Require Data $\{(y_i, x_{1i}, x_{2i})\}_{i=1}^n$, prior parameters $m_0, m_1, m_2, s_0^2, s_1^2, s_2^2, a_0, b_0$, number of iterations $T$, burn-in $B$, number of chains $K$
+\Ensure Posterior draws $\{(\beta_0^{(k,t)}, \beta_1^{(k,t)}, \beta_2^{(k,t)}, \sigma^{2(k,t)})\}_{k=1,\,t=B+1}^{K,\,T}$
+\For{$k = 1,\ldots,K$}
+    \State Choose starting values $\beta_0^{(k,0)}, \beta_1^{(k,0)}, \beta_2^{(k,0)}, \sigma^{2(k,0)}$ \textbf{independently} for each chain
+    \For{$t = 1,\ldots,T$}
+        \State Compute $V_{0\mid1,2,\sigma^2}$ and $\mu_{0\mid1,2,\sigma^2}$ using $\beta_1^{(k,t-1)}, \beta_2^{(k,t-1)}, \sigma^{2(k,t-1)}$
+        \State Draw $\beta_0^{(k,t)} \sim \mathcal{N}(\mu_{0\mid1,2,\sigma^2}, V_{0\mid1,2,\sigma^2})$
+        \State Compute $V_{1\mid0,2,\sigma^2}$ and $\mu_{1\mid0,2,\sigma^2}$ using $\beta_0^{(k,t)}, \beta_2^{(k,t-1)}, \sigma^{2(k,t-1)}$
+        \State Draw $\beta_1^{(k,t)} \sim \mathcal{N}(\mu_{1\mid0,2,\sigma^2}, V_{1\mid0,2,\sigma^2})$
+        \State Compute $V_{2\mid0,1,\sigma^2}$ and $\mu_{2\mid0,1,\sigma^2}$ using $\beta_0^{(k,t)}, \beta_1^{(k,t)}, \sigma^{2(k,t-1)}$
+        \State Draw $\beta_2^{(k,t)} \sim \mathcal{N}(\mu_{2\mid0,1,\sigma^2}, V_{2\mid0,1,\sigma^2})$
+        \State Compute $a_n$ and $b_n$ using $\beta_0^{(k,t)}, \beta_1^{(k,t)}, \beta_2^{(k,t)}$
+        \State Draw $\sigma^{2(k,t)} \sim \mathcal{IG}(a_n, b_n)$
+    \EndFor
+    \State Discard the first $B$ draws of chain $k$ as burn-in
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+# Run the sampler and report results
+
+#### Now, run the sampler. Keep in mind that we discard the first samples (burn-in). You can decide yourself how many samples you want to discard.
+
+::: {.callout-tip title="Programming hints"}
+**Hint 1 — `rnorm` uses standard deviation, not variance.**
+The update formulas give you $V_k$ as a **variance**. Check `?rnorm`: its `sd` argument expects a standard deviation. Pass `sd = sqrt(V_k)`, otherwise your samples will be on the wrong scale.
+
+**Hint 2 — Sampling from an Inverse-Gamma distribution.**
+Base R has no `rinvgamma` function. You have two options:
+
+- Use the relationship between the Gamma and Inverse-Gamma: if $X \sim \text{Gamma}(\alpha, \text{rate} = \beta)$, then $1/X \sim \mathcal{IG}(\alpha, \beta)$.
+- Or install the `invgamma` package `rinvgamma()`.
+
+**Hint 3 — Code structure.**
+Chapter 7 of *Bayes Rules!* builds the Metropolis-Hastings sampler in two steps: a `one_mh_iteration()` function that performs a single update, and a `mh_tour()` function that calls it in a loop. Follow the same two-function pattern here: write a `one_gibbs_iteration()` function that takes the current parameter values and returns updated draws for all four parameters (using the full conditionals above), then write a `gibbs_sampler()` function that runs it for $T$ iterations across $K$ chains.
+:::
+
+#### Plot the trace plots and compute the $\hat{R}$ statistic to check convergence of your chains (see Chapter 6.3).
+
+#### Report the intercept, regression slopes and residual variance, as well as their 95% credible intervals. Explain how you got to them.
+
+#### Compare your results to a Stan model
+
+A `model.stan` file is provided in the assignment folder. Fill in the prior parameters (use the same values you chose for the Gibbs sampler), run the model using `cmdstanr`, and compare the posterior means and 95% credible intervals from both approaches. Do they agree? Note that Stan samples `sigma` (standard deviation) while your Gibbs sampler targets `sigma^2` (variance) — convert before comparing.
+
+```{r}
+#| eval: false
+library(cmdstanr)
+
+stan_data <- list(
+  n  = nrow(anxiety_data),
+  y  = anxiety_data$anx_post,
+  x1 = anxiety_data$anx_baseline,
+  x2 = anxiety_data$group
+)
+
+mod <- cmdstan_model("model.stan")
+
+stan_fit <- mod$sample(
+  data          = stan_data,
+  chains        = 4,
+  iter_warmup   = 1000,
+  iter_sampling = 1000,
+  seed          = 1337
+)
+
+stan_fit$print(variables = c("beta_0", "beta_1", "beta_2", "sigma"))
+```
+
+
+
+# Hypothesis Testing
+
+As you have learned in Week 3, you can use Bayes factors (BF) for Bayesian hypothesis tests. To compute a simple BF for our model, we will use the Savage-Dickey Density Ratio (Wagenmakers et al., 2010).
+The Savage-Dickey BF$_{01}$ is calculated as the ratio of the posterior density to the prior density, both evaluated at the point of interest $\delta$. It therefore describes how much the data has shifted probability mass toward (or away from) the null value, relative to the prior. Concretely, for a point null hypothesis $H_0: \beta_k = \delta$ the Bayes factor in favour of $H_0$ is
+
+$$
+\text{BF}_{01} = \frac{p(\beta_k = \delta \mid y)}{p(\beta_k = \delta)}
+$$
+
+where the numerator is the posterior density and the denominator is the prior density, both evaluated at the point of interest $\delta$. A value $\text{BF}_{01} > 1$ supports $H_0$, while $\text{BF}_{01} < 1$ supports the alternative $H_1: \beta_k \neq \delta$.
+To compute the Savage-Dickey Bayes factor, you need to approximate the density of your posterior samples. You can do that through logspline density estimates in R and the `logspline` package. Example code to estimate the density in the posterior is shown below:
+
+```{r}
+#| eval: false
+
+# install.packages("logspline")
+library(logspline)
+# Fit a logspline density on the MCMC posterior_samples
+post_fit <- logspline(posterior_samples)
+# Approximated density at point of interest: 0
+posterior_density_at_point_of_interest <- dlogspline(0, post_fit)
+posterior_density_at_point_of_interest
+```
+
+To estimate the density in the prior, consider the `dnorm()` R function.
+
+#### Compute the Savage-Dickey Bayes factor to answer your hypothesis
+
+
+# Rubrics
+
+Please write a report no longer than 6 pages (including figures). The guidelines on the length of the report will be strictly enforced during grading.
+The questions in the assignment serve as a guidance for your research project. **You will only be graded on the final report!**
+
+At the end of your report, please include one paragraph which clearly states each group member's role and contribution. Furthermore, any use of LLMs must be transparently reported in this paragraph, including the specific LLM model used as well as the tasks it was used for. The use of LLMs is not prohibited, but it must be clearly acknowledged and described.
+
+*Important:* The contribution statement does not count towards the 6-page report limit, but it must be included at the end of your report.
+
+In case you cannot get the sampler to work, use the provided `model.stan` file with `cmdstanr` to write your report. But this will lead to a point reduction!
+
+During your report, you should answer the following questions and report the necessary numbers. You can decide for yourself whether to combine your report and your code in one .QMD file, or to keep them in two separate files. Either way, please upload a .pdf **and** a .R/.QMD file.
+
+### Methods
+
+- Briefly describe the research question and the dataset **(5pt)**
+  - Also find some literature (2-3 sources are sufficient) that support the claim of the research question.
+- Explain your model and the Gibbs sampler **(25pt)**
+- Briefly discuss the following additional question: **(5pt)**
+  - Why is the "burn-in" phase necessary? 
+- Report your prior distributions and report, and if necessary justify, all decisions that you make (prior parameters, iterations, burn-in, number of chains) **(10pt)**
+- Explain how you aim to answer the research question **(5pt)**
+
+### Results
+
+- Discuss convergence of your sampler (trace plots and $\hat{R}$) **(10pt)**
+- Report your parameters and the Bayes factor and interpret them **(10pt)**
+- Compare your posterior estimates to those from the Stan model **(10pt)**
+- Interpret the results **(5pt)**
+
+### Conclusion
+
+- Provide a summary of your analysis, including both the statistical conclusions and a substantive interpretation **(10pt)**
+- Briefly discuss the following additional question: **(5pt)**
+  - If Gibbs is so efficient and accepts 100% of proposals, why do we use HMC at all?
+
+# References
+
+Gelman, A., & Rubin, D. B. (1992). Inference from iterative simulation using multiple sequences. *Statistical Science*, *7*(4), 457–472. https://doi.org/10.1214/ss/1177011136
+
+Gelfand, A. E., & Smith, A. F. M. (1990). Sampling-based approaches to calculating marginal densities. *Journal of the American Statistical Association*, *85*(410), 398–409. https://doi.org/10.1080/01621459.1990.10476213
+
+Johnson, A. A., Ott, M. Q., & Dogucu, M. (2022). *Bayes Rules!: An introduction to applied Bayesian modeling*. Chapman and Hall/CRC. https://www.bayesrulesbook.com/
+
+Wagenmakers, E.-J., Lodewyckx, T., Kuriyal, H., & Grasman, R. (2010). Bayesian hypothesis testing for psychologists: A tutorial on the Savage-Dickey method. *Cognitive Psychology*, *60*(3), 158–189. https://doi.org/10.1016/j.cogpsych.2009.12.001
