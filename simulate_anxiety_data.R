@@ -6,7 +6,7 @@ N <- 120
 ## 1. Treatment assignment: 0 = control, 1 = mindfulness
 group <- rbinom(N, size = 1, prob = 0.5)
 
-## 2. Baseline state anxiety (STAI-like: 20-80)
+## 2. Baseline state anxiety
 # Assume a slightly elevated anxious sample: mean ~55, sd ~10
 anx_baseline <- rnorm(N, mean = 55, sd = 10)
 
@@ -26,7 +26,7 @@ mu_post <- beta_0 + beta_1 * anx_baseline + beta_2 * group
 anx_post <- rnorm(N, mean = mu_post, sd = sigma)
 anx_post <- floor(anx_post)
 
-## 5. Optional: bound scores to a plausible 20-80 range
+## 5. bound scores to a plausible 20-80 range
 anx_baseline <- pmin(pmax(anx_baseline, 20), 80)
 anx_post     <- pmin(pmax(anx_post,     20), 80)
 
