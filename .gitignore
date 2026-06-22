@@ -11,7 +11,6 @@
 /.quarto/
 *_files/
 *.html
-*.pdf
 *.docx
 
 # Stan compiled files
