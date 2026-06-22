@@ -25,6 +25,8 @@ The data is **simulated**. The research question is:
 | `simulate_anxiety_data.R` | Script that simulates the `anxiety_data` dataset (N = 120) and saves it. |
 | `anxiety_data.rds` | The simulated dataset used in the analysis. |
 | `model.stan` | Stan model for the same regression, used to cross-check the hand-coded Gibbs sampler via `cmdstanr`. |
+| bayesstats-assignment.qmd | Presentation Qmd file |
+| bayesstats-assignment.html | rendered presentation |
 
 
 ## Requirements
@@ -39,6 +41,12 @@ The data is **simulated**. The research question is:
 install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 cmdstanr::check_cmdstan_toolchain(fix = TRUE)
 cmdstanr::install_cmdstan(cores = 2)
+```
+To make sure everything installed correctly, run this example:
+
+```r
+file <- file.path(cmdstan_path(), "examples", "bernoulli", "bernoulli.stan")
+mod <- cmdstan_model(file)
 ```
 
 If you run into any problems, you can look at the [Getting started with CmdStanR](https://mc-stan.org/cmdstanr/articles/cmdstanr.html) guide.

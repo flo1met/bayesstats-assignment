@@ -1,0 +1,23 @@
+title: UvA RevealJS
+author: F.J. Metwaly
+version: 1.0.0
+quarto-required: ">=1.4.0"
+contributes:
+  formats:
+    revealjs:
+      theme: [default, uva-theme.scss]
+      template-partials:
+        - _partials/title-slide.html
+      logo: logo-regular_uva.webp
+      slide-number: true
+      progress: true
+      history: false
+      transition: fade
+      transition-speed: fast
+      width: 1280
+      height: 720
+      margin: 0.08
+      code-line-numbers: true
+      highlight-style: github
+      fig-align: center
+      embed-resources: true

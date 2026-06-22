@@ -1,0 +1,345 @@
+/*-- UvA RevealJS Theme -------------------------------------------------------
+   University of Amsterdam — Academic Conference Style
+   Brand colours: https://www.uva.nl/en/about-the-uva/about-the-university/
+     Primary red   #BC0031
+     Black         #000000
+     White         #FFFFFF
+     Dark grey     #404040
+     Light grey    #F5F5F5
+     Warm off-white #FAF9F7
+-----------------------------------------------------------------------------*/
+
+/*-- scss:defaults --*/
+
+// ── Typography ────────────────────────────────────────────────────────────────
+$font-family-sans-serif:  "Helvetica Neue", Helvetica, Arial, sans-serif;
+$font-family-serif:       Georgia, "Times New Roman", serif;
+$presentation-font-size-root: 36px;
+$presentation-line-height: 1.45;
+
+// ── UvA colour palette ────────────────────────────────────────────────────────
+$uva-red:        #BC0031;
+$uva-red-dark:   #8C0025;
+$uva-red-light:  #E8003A;
+$uva-black:      #0D0D0D;
+$uva-dark-grey:  #404040;
+$uva-mid-grey:   #9E9E9E;
+$uva-light-grey: #F0EEEC;
+$uva-off-white:  #FAF9F7;
+
+// ── RevealJS base variables ───────────────────────────────────────────────────
+$body-bg:              #FFFFFF;
+$body-color:           $uva-black;
+$link-color:           $uva-red;
+$link-color-hover:     $uva-red-dark;
+$selection-bg:         $uva-red;
+$selection-color:      #FFFFFF;
+
+$presentation-heading-font:   $font-family-sans-serif;
+$presentation-heading-color:  $uva-black;
+$presentation-heading-font-weight: 600;
+$presentation-heading-line-height: 1.15;
+$presentation-heading-letter-spacing: -0.01em;
+
+$h1-font-size: 1.65em;
+$h2-font-size: 1.30em;
+$h3-font-size: 1.05em;
+
+
+/*-- scss:rules --*/
+
+// ── Slide body ────────────────────────────────────────────────────────────────
+.reveal .slides section {
+  font-family: $font-family-sans-serif;
+  color: $uva-black;
+}
+
+// ── Heading style with red left-border accent ─────────────────────────────────
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4 {
+  font-family: $font-family-sans-serif;
+  color: $uva-black;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.reveal h2 {
+  border-left: 5px solid $uva-red;
+  padding-left: 0.45em;
+  margin-bottom: 0.6em;
+}
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+.reveal a {
+  color: $uva-red;
+  text-decoration: none;
+}
+.reveal a:hover {
+  color: $uva-red-dark;
+  text-decoration: underline;
+}
+
+// ── Horizontal rule ───────────────────────────────────────────────────────────
+.reveal hr {
+  border: none;
+  border-top: 2px solid $uva-red;
+  margin: 0.5em 0 1em 0;
+}
+
+// ── Bullets ───────────────────────────────────────────────────────────────────
+.reveal ul {
+  list-style: none;
+  padding-left: 1.1em;
+}
+.reveal ul li::before {
+  content: "▸";
+  color: $uva-red;
+  font-weight: 700;
+  display: inline-block;
+  width: 1em;
+  margin-left: -1em;
+}
+.reveal ol {
+  padding-left: 1.4em;
+}
+.reveal ol li::marker {
+  color: $uva-red;
+  font-weight: 700;
+}
+
+// ── Code blocks ───────────────────────────────────────────────────────────────
+.reveal pre {
+  background-color: $uva-light-grey;
+  border-left: 4px solid $uva-red;
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 0.72em;
+  padding: 0.75em 1em;
+}
+.reveal code {
+  color: $uva-red-dark;
+  background-color: $uva-light-grey;
+  border-radius: 3px;
+  padding: 0.05em 0.25em;
+  font-size: 0.85em;
+}
+.reveal pre code {
+  color: $uva-black;
+  background: transparent;
+  padding: 0;
+  font-size: 1em;
+}
+
+// ── Blockquotes ───────────────────────────────────────────────────────────────
+.reveal blockquote {
+  border-left: 4px solid $uva-red;
+  background-color: $uva-light-grey;
+  color: $uva-dark-grey;
+  font-style: italic;
+  padding: 0.6em 1em;
+  border-radius: 0 4px 4px 0;
+  box-shadow: none;
+  width: 95%;
+}
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+.reveal table {
+  font-size: 0.82em;
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 0.5em;
+}
+.reveal table th {
+  background-color: $uva-red;
+  color: #FFFFFF;
+  font-weight: 600;
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+.reveal table td {
+  border-bottom: 1px solid $uva-light-grey;
+  padding: 0.35em 0.7em;
+}
+.reveal table tr:nth-child(even) td {
+  background-color: $uva-off-white;
+}
+.reveal table tr:hover td {
+  background-color: #FCE8ED;
+}
+
+// ── Figures / images ──────────────────────────────────────────────────────────
+.reveal img {
+  border-radius: 3px;
+}
+.reveal .caption, .reveal figcaption {
+  font-size: 0.7em;
+  color: $uva-mid-grey;
+  font-style: italic;
+  margin-top: 0.3em;
+}
+
+// ── Callout boxes (using Quarto callout divs) ─────────────────────────────────
+.reveal .callout {
+  border-radius: 4px;
+  margin: 0.5em 0;
+}
+.reveal .callout-note {
+  border-left: 5px solid $uva-red;
+  background-color: #FDECEF;
+}
+.reveal .callout-tip {
+  border-left: 5px solid #1A7A4A;
+  background-color: #E8F5EE;
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
+.reveal .progress {
+  background: rgba(188, 0, 49, 0.15);
+}
+.reveal .progress span {
+  background: $uva-red;
+}
+
+// ── Slide number ──────────────────────────────────────────────────────────────
+.reveal .slide-number {
+  color: $uva-mid-grey;
+  font-size: 0.6em;
+  bottom: 14px;
+  right: 14px;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+.reveal .footer {
+  font-size: 0.52em;
+  color: $uva-mid-grey;
+  bottom: 10px;
+  left: 14px;
+}
+
+// ── Title slide ───────────────────────────────────────────────────────────────
+.reveal #title-slide {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Red top stripe
+.reveal #title-slide::before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 7px;
+  background: $uva-red;
+}
+
+// Red bottom stripe
+.reveal #title-slide::after {
+  content: "";
+  display: block;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(to right, $uva-red, $uva-red-dark);
+}
+
+// Wrapper div injected by the partial
+.reveal #title-slide .title-slide-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+// Horizontal rule on title slide
+.reveal #title-slide .uva-title-rule {
+  border: none;
+  border-top: 2px solid $uva-red;
+  width: 100%;
+  margin: 0 0 1.0em 0;
+}
+
+.reveal #title-slide .title {
+  font-size: 1.65em;
+  font-weight: 700;
+  color: $uva-black;
+  line-height: 1.15;
+  margin-bottom: 0.2em;
+}
+
+.reveal #title-slide .subtitle {
+  font-size: 1.05em;
+  color: $uva-red;
+  font-weight: 400;
+  margin-bottom: 1.0em;
+}
+
+// Author, institute, date grouped together
+.reveal #title-slide .title-meta {
+  margin-top: 0.4em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1em;
+}
+
+.reveal #title-slide .author {
+  font-size: 0.70em;
+  color: $uva-dark-grey;
+  font-weight: 500;
+  margin: 0;
+}
+
+.reveal #title-slide .institute {
+  font-size: 0.62em;
+  color: $uva-mid-grey;
+  font-weight: 400;
+  margin: 0;
+}
+
+.reveal #title-slide .date {
+  font-size: 0.58em;
+  color: $uva-mid-grey;
+  margin-top: 0.3em;
+}
+
+// ── Section divider slides ────────────────────────────────────────────────────
+.reveal .slide-background-content {
+  background: $uva-off-white;
+}
+
+// Class for full-red section title slides: add {.section-slide} to a slide
+.reveal section.section-slide {
+  background-color: $uva-red !important;
+}
+.reveal section.section-slide h1,
+.reveal section.section-slide h2 {
+  color: #FFFFFF !important;
+  border-left: 5px solid rgba(255,255,255,0.5) !important;
+  padding-left: 0.45em;
+}
+
+// ── Highlight helper classes ──────────────────────────────────────────────────
+.highlight-red  { color: $uva-red; font-weight: 700; }
+.highlight-grey { color: $uva-mid-grey; }
+.small-text     { font-size: 0.75em; }
+.tiny-text      { font-size: 0.62em; }
+.center-text    { text-align: center; }
+
+// ── Two-column helper ─────────────────────────────────────────────────────────
+// Usage: :::{.columns} ::: {.column width="50%"} … ::: :::
+.reveal .columns {
+  display: flex;
+  gap: 1.5em;
+  align-items: flex-start;
+}
