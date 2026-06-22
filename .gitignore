@@ -10,7 +10,6 @@
 /_freeze/
 /.quarto/
 *_files/
-*.html
 *.docx
 
 # Stan compiled files
